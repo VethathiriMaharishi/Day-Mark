@@ -1,29 +1,28 @@
-// ✅ Attendance Cell Color Styling
+// ✅ Highlight attendance
 function updateStatusClass(cell, value) {
   cell.classList.remove("present", "absent");
-  if (value === "Present") {
-    cell.classList.add("present");
-  } else if (value === "Absent") {
-    cell.classList.add("absent");
-  }
+  if (value === "Present") cell.classList.add("present");
+  else if (value === "Absent") cell.classList.add("absent");
+  updateSummaryCount();
 }
 
-// ✅ Add Row
+// ✅ Add row
 function addRow() {
   const tableBody = document.getElementById("tableBody");
   const row = document.createElement("tr");
+  const cols = document.getElementById("tableHeader").children.length - 1;
 
-  // Default columns: Name, Roll No, Class, Section
-  for (let i = 0; i < document.getElementById("tableHeader").children.length - 1; i++) {
+  for (let i = 0; i < cols; i++) {
     const td = document.createElement("td");
     if (i === 4) {
       const input = document.createElement("input");
       input.type = "tel";
       input.placeholder = "Enter number";
-      input.onblur = function () {
+      input.onblur = () => {
         const number = input.value.trim();
         if (number) {
           td.innerHTML = `<a href="tel:${number}">${number}</a>`;
+          td.onclick = () => makeEditable(td, number);
         }
       };
       td.appendChild(input);
@@ -33,108 +32,270 @@ function addRow() {
     row.appendChild(td);
   }
 
-  // Attendance Dropdown
   const attendanceTd = document.createElement("td");
   const select = document.createElement("select");
-  select.innerHTML = `
-    <option value="Present">Present</option>
-    <option value="Absent">Absent</option>
-  `;
+  select.innerHTML = `<option value="Present">Present</option><option value="Absent">Absent</option>`;
   select.onchange = () => updateStatusClass(attendanceTd, select.value);
   updateStatusClass(attendanceTd, select.value);
   attendanceTd.appendChild(select);
   row.appendChild(attendanceTd);
-
   tableBody.appendChild(row);
+  updateSummaryCount();
 }
 
-// ✅ Remove Last Row
-function deleteRow() {
+// ✅ Make number editable again
+function makeEditable(td, number) {
+  td.innerHTML = "";
+  const input = document.createElement("input");
+  input.type = "tel";
+  input.value = number;
+  input.onblur = () => {
+    if (input.value.trim()) {
+      td.innerHTML = `<a href="tel:${input.value.trim()}">${input.value.trim()}</a>`;
+      td.onclick = () => makeEditable(td, input.value.trim());
+      saveData();
+    }
+  };
+  td.appendChild(input);
+  input.focus();
+}
+
+// ✅ Remove row
+function removeRow() {
   const tableBody = document.getElementById("tableBody");
-  if (tableBody.rows.length === 0) {
-    alert("No rows to delete.");
-    return;
-  }
-  tableBody.deleteRow(tableBody.rows.length - 1);
+  if (tableBody.rows.length > 0) tableBody.deleteRow(-1);
+  updateSummaryCount();
 }
 
-// ✅ Add Column Before Attendance
+// ✅ Add column
 function addColumn() {
   const header = document.getElementById("tableHeader");
-  const newTh = document.createElement("th");
-  newTh.contentEditable = true;
-  newTh.textContent = "New Column";
-  header.insertBefore(newTh, header.lastElementChild);
+  const th = document.createElement("th");
+  th.textContent = "New Column";
+  th.contentEditable = true;
+  header.insertBefore(th, header.lastElementChild);
 
   document.querySelectorAll("#tableBody tr").forEach(row => {
-    const newTd = document.createElement("td");
-    newTd.contentEditable = true;
-    row.insertBefore(newTd, row.lastElementChild);
+    const td = document.createElement("td");
+    td.contentEditable = true;
+    row.insertBefore(td, row.lastElementChild);
   });
 }
 
-// ✅ Remove Only User-Added Columns (not default)
-const defaultColumnCount = 5; // Adjust based on default headers (before Attendance)
-
+// ✅ Remove only user-added columns
+const defaultColumnCount = 5;
 function removeColumn() {
   const header = document.getElementById("tableHeader");
-  const totalColumns = header.children.length;
-
-  if (totalColumns <= defaultColumnCount + 1) {
+  const total = header.children.length;
+  if (total <= defaultColumnCount + 1) {
     alert("Cannot remove default columns.");
     return;
   }
-
-  const index = totalColumns - 2;
+  const index = total - 2;
   header.removeChild(header.children[index]);
-
   document.querySelectorAll("#tableBody tr").forEach(row => {
     row.removeChild(row.children[index]);
   });
 }
 
-// ✅ Save Data
+// ✅ Save data including attendance
 function saveData() {
-  const headers = [];
-  const headerCells = document.querySelectorAll("#tableHeader th");
-  for (let i = 0; i < headerCells.length - 1; i++) {
-    headers.push(headerCells[i].innerText.trim());
-  }
-
-  const rows = [];
-  document.querySelectorAll("#tableBody tr").forEach(row => {
-    const rowData = [];
-    for (let i = 0; i < row.children.length - 1; i++) {
-      const cell = row.children[i];
-      if (cell.querySelector("a")) {
-        rowData.push(cell.querySelector("a").textContent.trim());
-      } else {
-        rowData.push(cell.textContent.trim());
-      }
-    }
-    rows.push(rowData);
+  const headers = [...document.querySelectorAll("#tableHeader th")].slice(0, -1).map(th => th.innerText);
+  const rows = [...document.querySelectorAll("#tableBody tr")].map(row => {
+    const data = [...row.children].slice(0, -1).map(cell => {
+      const a = cell.querySelector("a");
+      return a ? a.textContent.trim() : cell.textContent.trim();
+    });
+    const select = row.querySelector("select");
+    data.push(select?.value || "");
+    return data;
   });
-
   localStorage.setItem("attendanceHeaders", JSON.stringify(headers));
   localStorage.setItem("attendanceRows", JSON.stringify(rows));
+  updateSummaryCount();
 }
 
-// ✅ Load Data
+// ✅ Load data
 function loadData() {
   const headers = JSON.parse(localStorage.getItem("attendanceHeaders"));
   const rows = JSON.parse(localStorage.getItem("attendanceRows"));
-
   if (!headers || !rows) {
-    alert("No saved data found.");
+    addRow();
     return;
   }
 
   const header = document.getElementById("tableHeader");
-  const tableBody = document.getElementById("tableBody");
+  const body = document.getElementById("tableBody");
   header.innerHTML = "";
-  tableBody.innerHTML = "";
+  body.innerHTML = "";
 
-  headers.forEach(text => {
+  headers.forEach(h => {
+    const th = document.createElement("th");
+    th.contentEditable = true;
+    th.textContent = h;
+    header.appendChild(th);
+  });
+
+  const th = document.createElement("th");
+  th.textContent = "Attendance";
+  header.appendChild(th);
+
+  rows.forEach(data => {
+    const row = document.createElement("tr");
+    data.forEach((text, i) => {
+      const td = document.createElement("td");
+      if (i === 4) {
+        const input = document.createElement("input");
+        input.type = "tel";
+        input.value = text;
+        input.onblur = () => {
+          if (input.value.trim()) {
+            td.innerHTML = `<a href="tel:${input.value.trim()}">${input.value.trim()}</a>`;
+            td.onclick = () => makeEditable(td, input.value.trim());
+            saveData();
+          }
+        };
+        td.appendChild(input);
+      } else {
+        td.contentEditable = true;
+        td.textContent = text;
+      }
+      row.appendChild(td);
+    });
+
+    const attendanceTd = document.createElement("td");
+    const select = document.createElement("select");
+    select.innerHTML = `<option value="Present">Present</option><option value="Absent">Absent</option>`;
+    select.value = data[data.length - 1];
+    select.onchange = () => updateStatusClass(attendanceTd, select.value);
+    updateStatusClass(attendanceTd, select.value);
+    attendanceTd.appendChild(select);
+    row.appendChild(attendanceTd);
+    body.appendChild(row);
+  });
+
+  updateSummaryCount();
+}
+
+// ✅ Export all to Excel
+function exportToExcel() {
+  const table = document.getElementById("attendanceTable");
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(table);
+  XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+  XLSX.writeFile(wb, "attendance.xlsx");
+}
+
+// ✅ Export all to PDF
+function exportToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const table = document.getElementById("attendanceTable").cloneNode(true);
+
+  table.querySelectorAll("select").forEach(select => {
+    const td = select.parentElement;
+    td.textContent = select.value;
+  });
+
+  const date = document.getElementById("dateInput").value;
+  doc.setFontSize(16);
+  doc.text("Daymark Attendance", 14, 16);
+  doc.setFontSize(12);
+  doc.text(`Date: ${date}`, 14, 24);
+
+  doc.autoTable({ html: table, startY: 30 });
+  doc.save("attendance.pdf");
+}
+
+// ✅ Filtered Export
+function exportFilteredPDF(status) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const headers = [...document.querySelectorAll("#tableHeader th")].map(th => th.innerText);
+  const rows = [];
+
+  document.querySelectorAll("#tableBody tr").forEach(row => {
+    const values = [...row.children].map(cell => {
+      if (cell.querySelector("select")) {
+        return cell.querySelector("select").value;
+      } else {
+        return cell.textContent.trim();
+      }
+    });
+    if (values[5] === status) rows.push(values);
+  });
+
+  if (rows.length === 0) {
+    alert(`No ${status} records found.`);
+    return;
+  }
+
+  doc.setFontSize(16);
+  doc.text(`${status} Students`, 14, 16);
+  doc.autoTable({
+    head: [headers],
+    body: rows,
+    startY: 25,
+  });
+
+  doc.save(`${status}_Attendance.pdf`);
+}
+
+function exportPresentPDF() {
+  exportFilteredPDF("Present");
+}
+
+function exportAbsentPDF() {
+  exportFilteredPDF("Absent");
+}
+
+// ✅ Show selected weekday
+function updateDay() {
+  const date = new Date(document.getElementById("dateInput").value);
+  const day = date.toLocaleDateString("en-US", { weekday: "long" });
+  document.getElementById("dayDisplay").textContent = `(${day})`;
+}
+
+// ✅ Search
+function searchTable() {
+  const filter = document.getElementById("searchInput").value.toLowerCase();
+  document.querySelectorAll("#tableBody tr").forEach(row => {
+    const name = row.children[0]?.textContent.toLowerCase() || "";
+    const roll = row.children[1]?.textContent.toLowerCase() || "";
+    row.style.display = (name.includes(filter) || roll.includes(filter)) ? "" : "none";
+  });
+}
+
+// ✅ Update attendance counts
+function updateSummaryCount() {
+  let present = 0, absent = 0;
+  document.querySelectorAll("#tableBody tr").forEach(row => {
+    const select = row.querySelector("select");
+    if (select) {
+      if (select.value === "Present") present++;
+      else if (select.value === "Absent") absent++;
+    }
+  });
+  document.getElementById("presentCount").textContent = `Present: ${present}`;
+  document.getElementById("absentCount").textContent = `Absent: ${absent}`;
+}
+
+// ✅ Clear all data
+function clearData() {
+  const confirmClear = confirm("Are you sure you want to clear all saved data?");
+  if (!confirmClear) return;
+
+  localStorage.removeItem("attendanceHeaders");
+  localStorage.removeItem("attendanceRows");
+
+  const header = document.getElementById("tableHeader");
+  const body = document.getElementById("tableBody");
+
+  header.innerHTML = "";
+  body.innerHTML = "";
+
+  const defaultHeaders = ["Name", "Roll No", "Class", "Section", "Mobile Number"];
+  defaultHeaders.forEach(text => {
     const th = document.createElement("th");
     th.contentEditable = true;
     th.textContent = text;
@@ -145,88 +306,10 @@ function loadData() {
   attendanceTh.textContent = "Attendance";
   header.appendChild(attendanceTh);
 
-  rows.forEach(data => {
-    const row = document.createElement("tr");
-
-    data.forEach((cellText, i) => {
-      const td = document.createElement("td");
-
-      if (i === 4 && /^\d{6,15}$/.test(cellText)) {
-        td.innerHTML = `<a href="tel:${cellText}">${cellText}</a>`;
-      } else {
-        td.contentEditable = true;
-        td.textContent = cellText;
-      }
-
-      row.appendChild(td);
-    });
-
-    const attendanceTd = document.createElement("td");
-    const select = document.createElement("select");
-    select.innerHTML = `
-      <option value="Present">Present</option>
-      <option value="Absent">Absent</option>
-    `;
-    select.onchange = () => updateStatusClass(attendanceTd, select.value);
-    updateStatusClass(attendanceTd, select.value);
-    attendanceTd.appendChild(select);
-    row.appendChild(attendanceTd);
-
-    tableBody.appendChild(row);
-  });
+  addRow();
+  updateSummaryCount();
 }
 
-// ✅ Export to Excel
-function exportToExcel() {
-  const table = document.getElementById("attendanceTable");
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, ws, "Attendance");
-  XLSX.writeFile(wb, "attendance.xlsx");
-}
-function exportToPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const originalTable = document.getElementById("attendanceTable");
-  const clonedTable = originalTable.cloneNode(true);
-
-  // Replace dropdowns with text
-  clonedTable.querySelectorAll("select").forEach(select => {
-    const td = select.parentElement;
-    td.textContent = select.value;
-  });
-
-  // Get selected date
-  const selectedDate = document.getElementById("dateInput").value;
-  const formattedDate = selectedDate
-    ? new Date(selectedDate).toLocaleDateString()
-    : "No date selected";
-
-  // Add title and date to PDF
-  doc.setFontSize(16);
-  doc.text("Daymark Attendance", 14, 16);
-  doc.setFontSize(12);
-  doc.text(`Date: ${formattedDate}`, 14, 24);
-
-  // Add table below the date
-  doc.autoTable({
-    html: clonedTable,
-    startY: 30,
-    theme: 'grid',
-    headStyles: { fillColor: [41, 128, 185] },
-  });
-
-  doc.save("attendance.pdf");
-}
-
-
-// ✅ Auto-save on input or dropdown change
+// ✅ Auto save
 document.addEventListener("input", saveData);
 document.addEventListener("change", saveData);
-function removeRow() {
-  const tableBody = document.getElementById('tableBody');
-  if (tableBody.rows.length > 0) {
-    tableBody.deleteRow(tableBody.rows.length - 1);
-  }
-}
