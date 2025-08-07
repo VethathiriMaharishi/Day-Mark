@@ -1,64 +1,57 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title> VMHS SCHOOL ATC</title>
-  <link rel="stylesheet" href="./style.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📚 Daymark Attendance</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
-<body>
-<!-- partial:index.partial.html -->
-<section class="attendance-section">
+<body onload="loadData()">
   <div class="container">
-    <h1 id="school-title">VMHS SCHOOL</h1>
-    <h2 id="attendance-title">Attendance Management</h2>
+    <h1>Daymark Attendance</h1>
 
-    <div class="controls" id="controls">
+    <div class="top-bar">
       <input type="date" id="dateInput" onchange="updateDay()" />
-      <span id="dayDisplay"></span><br><br>
-
-      
-       <button onclick="addColumn()">Add Column</button>
-    <button onclick="removeColumn()">Remove Column</button>
-      <button onclick="addRow()">Add Row</button>
-      <button onclick="saveData()">Save</button>
-      <button onclick="loadData()">Load</button>
-      <button onclick="removeRow()">Remove Row
-    </button>
+      <span id="dayDisplay"></span>
+      <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search by name or roll" />
     </div>
 
-   <table id="attendanceTable" class="attendance-table">
-  <thead>
-    <tr id="tableHeader">
-      <th contenteditable="true">Name</th>
-      <th contenteditable="true">Roll No</th>
-      <th contenteditable="true">Class</th>
-      <th contenteditable="true">Section</th>
-      <th contenteditable="true">Mobile Number</th>
-      <th contenteditable="true">Attendance</th>
-      
-    </tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
-</table>
-<div class="powered-by">
-  <span>POWERED BY  DUVANESH, VIJAY, PRAVEEN </span>
-</div>
-<table id="yourTableId">
-  <tbody id="tableBody">
-    ...
-  </tbody>
-</table>
-<button onclick="exportToPDF()">Export as PDF</button>
-<button onclick="exportToExcel()">Export as Excel</button>
-<!-- jsPDF for PDF Export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <table id="attendanceTable">
+      <thead>
+        <tr id="tableHeader">
+          <th contenteditable>Name</th>
+          <th contenteditable>Roll No</th>
+          <th contenteditable>Class</th>
+          <th contenteditable>Section</th>
+          <th contenteditable>Mobile Number</th>
+          <th>Attendance</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
 
-<!-- SheetJS for Excel Export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- partial -->
-  <script  src="./script.js"></script>
+    <div id="summaryCounts">
+      <span id="presentCount">Present: 0</span> |
+      <span id="absentCount">Absent: 0</span>
+    </div>
 
+    <div class="btn-group">
+      <button onclick="addRow()">Add Row</button>
+      <button onclick="removeRow()">Remove Row</button>
+      <button onclick="addColumn()">Add Column</button>
+      <button onclick="removeColumn()">Remove Column</button>
+      <button onclick="exportToExcel()">Export Excel</button>
+      <button onclick="exportToPDF()">Export All PDF</button>
+      <button onclick="exportPresentPDF()">Present PDF</button>
+      <button onclick="exportAbsentPDF()">Absent PDF</button>
+      <button onclick="saveData()">Save</button>
+      <button onclick="clearData()">Clear All</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
